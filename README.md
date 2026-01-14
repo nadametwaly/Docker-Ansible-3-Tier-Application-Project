@@ -1,1 +1,1 @@
-evOps Practical Project – CI/CD with MultiEnvironment Deployment
+DevOps Practical Project – CI/CD with MultiEnvironment Deployment
