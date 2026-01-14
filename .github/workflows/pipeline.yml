@@ -41,6 +41,11 @@ jobs:
                 node-version: 20
           - name: Installing Dependencies
             run: npm install
+            working-directory: React-Frontend
+
+          - name: Build React Application
+            run: npm run build
+            working-directory: React-Frontend
 
           - name: CodeQL Analysis
             uses: github/codeql-action/init@v3
