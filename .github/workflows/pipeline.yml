@@ -58,7 +58,7 @@ jobs:
              category: gitleaks
 
           - name: Build & Push React Docker Image
-            uses: nadametwaly24/centralized-automation-repo/.github/actions/react-docker-s2i@main
+            uses: nadametwaly/centralized-automation-repo/.github/actions/react-docker-s2i@main
             with:
                 registry: ghcr.io
                 username: ${{ github.actor }}
