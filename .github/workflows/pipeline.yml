@@ -71,7 +71,7 @@ jobs:
                 registry: ghcr.io
                 username: ${{ github.actor }}
                 password: ${{ secrets.GITHUB_TOKEN }}
-                image_name: nadametwaly/react-frontend
+                image-name: nadametwaly/react-frontend
                 tag: latest
 
           - name: Run Trivy     #vulnerability scanner
