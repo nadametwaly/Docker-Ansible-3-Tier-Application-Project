@@ -126,9 +126,11 @@ jobs:
                 npm install -g @railway/cli
         
           - name: Authenticate Railway CLI
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
+          - name: Verify Railway Auth
             run: railway whoami
+
+
         
           - name: Set Environment Variables
             env:
