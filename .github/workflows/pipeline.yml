@@ -106,10 +106,10 @@ jobs:
 
 
 
+
+
+
     
-    # ========================================
-  # 🟢 Deploy React to Railway (Staging & Production)
-  # ========================================
     deploy-react-railway:
         name: Deploy React to Railway
         runs-on: ubuntu-latest
@@ -127,9 +127,13 @@ jobs:
                 echo "$HOME/.railway/bin" >> $GITHUB_PATH
         
           - name: Authenticate Railway CLI
-            run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
+            env:
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            run: railway whoami
         
           - name: Set Environment Variables
+            env:
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
                 railway variables set \
                     DB_HOST=${{ vars.DB_HOST }} \
@@ -140,6 +144,8 @@ jobs:
                     --service ${{ secrets.RAILWAY_REACT_SERVICE_ID }}
         
           - name: Deploy React Service to Railway
+            env:
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
                 railway up --service ${{ secrets.RAILWAY_REACT_SERVICE_ID }} --detach
         
@@ -153,9 +159,9 @@ jobs:
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "✅ React application deployed successfully!" >> $GITHUB_STEP_SUMMARY
 
-  # ========================================
-  # 🔵 Deploy .NET to Railway (Staging & Production)
-  # ========================================
+    # ========================================
+    # 🔵 Deploy .NET to Railway (Staging & Production)
+    # ========================================
     deploy-dotnet-railway:
         name: Deploy .NET to Railway
         runs-on: ubuntu-latest
@@ -173,9 +179,13 @@ jobs:
                 echo "$HOME/.railway/bin" >> $GITHUB_PATH
         
           - name: Authenticate Railway CLI
-            run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
+            env:
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            run: railway whoami
         
           - name: Set Environment Variables
+            env:
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
                 railway variables set \
                     DB_HOST=${{ vars.DB_HOST }} \
@@ -184,10 +194,12 @@ jobs:
                     DB_USER=${{ vars.DB_USER }} \
                     MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
                     --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}
-        
+            
           - name: Deploy .NET Service to Railway
+            env:
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
-                railway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} --detach
+            r   ailway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} --detach
         
           - name: Deployment Summary
             run: |
@@ -198,6 +210,9 @@ jobs:
                 echo "**Service ID:** ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "✅ .NET backend deployed successfully!" >> $GITHUB_STEP_SUMMARY
+
+
+
 
     deploy-dev:
         needs: [dotnet-ci, react-ci]
