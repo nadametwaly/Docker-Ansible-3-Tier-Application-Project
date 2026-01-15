@@ -199,7 +199,7 @@ jobs:
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
-            r   ailway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} --detach
+                railway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} --detach
         
           - name: Deployment Summary
             run: |
