@@ -113,27 +113,15 @@ jobs:
         if: ${{ github.event.inputs.environment != 'dev' }}
         environment:
             name: ${{ github.event.inputs.environment }}
+        container:
+            image: ghcr.io/railwayapp/cli:latest
+        env:
+            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}  # REQUIRED!
         steps:
-          - name: Trigger Railway Deployment via API
+          - name: Deploy React App to Railway
             run: |
-                RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-                  https://backboard.railway.app/graphql/v2 \
-                  -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-                  -H "Content-Type: application/json" \
-                  -d '{"query":"mutation serviceInstanceRedeploy($serviceId: String!) { serviceInstanceRedeploy(serviceId: $serviceId) }","variables":{"serviceId":"${{ secrets.RAILWAY_REACT_SERVICE_ID }}"}}')
-                
-                HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-                BODY=$(echo "$RESPONSE" | head -n-1)
-                
-                if [ "$HTTP_CODE" -eq 200 ]; then
-                    echo "✅ Railway deployment triggered successfully for React app"
-                    echo "Response: $BODY"
-                    echo "Check Railway dashboard for deployment progress"
-                else
-                    echo "❌ Failed to trigger deployment. HTTP Code: $HTTP_CODE"
-                    echo "Response: $BODY"
-                    exit 1
-                fi
+                railway redeploy --service=${{ secrets.RAILWAY_REACT_SERVICE_ID }} -y
 
     deploy-dotnet-railway:
         needs: dotnet-ci
@@ -141,27 +129,34 @@ jobs:
         if: ${{ github.event.inputs.environment != 'dev' }}
         environment:
             name: ${{ github.event.inputs.environment }}
+        container:
+            image: ghcr.io/railwayapp/cli:latest
+        env:
+            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}  # REQUIRED!
         steps:
-          - name: Trigger Railway Deployment via API
+          - uses: actions/checkout@v4
+
+          - name: Set Railway Variables
+            env:
+                DB_HOST: ${{ vars.DB_HOST }}
+                DB_PORT: ${{ vars.DB_PORT }}
+                DB_NAME: ${{ vars.DB_NAME }}
+                DB_USER: ${{ vars.DB_USER }}
+                DB_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
             run: |
-                RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-                  https://backboard.railway.app/graphql/v2 \
-                  -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-                  -H "Content-Type: application/json" \
-                  -d '{"query":"mutation serviceInstanceRedeploy($serviceId: String!) { serviceInstanceRedeploy(serviceId: $serviceId) }","variables":{"serviceId":"${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}"}}')
+                # Build connection string from components
+                CONNECTION_STRING="Server=${DB_HOST};Port=${DB_PORT};Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};"
                 
-                HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-                BODY=$(echo "$RESPONSE" | head -n-1)
-                
-                if [ "$HTTP_CODE" -eq 200 ]; then
-                    echo "✅ Railway deployment triggered successfully for .NET backend"
-                    echo "Response: $BODY"
-                    echo "Check Railway dashboard for deployment progress"
-                else
-                    echo "❌ Failed to trigger deployment. HTTP Code: $HTTP_CODE"
-                    echo "Response: $BODY"
-                    exit 1
-                fi
+                # Set Railway environment variables
+                railway variables set \
+                ASPNETCORE_ENVIRONMENT=${{ github.event.inputs.environment }} \
+                ConnectionStrings__Default="${CONNECTION_STRING}"
+
+          - name: Deploy .NET Backend
+            run: |
+                railway redeploy --service=${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} -y
+
 
 
     deploy-dev:
