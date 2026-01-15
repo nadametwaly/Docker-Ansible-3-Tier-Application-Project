@@ -114,20 +114,27 @@ jobs:
         environment:
             name: ${{ github.event.inputs.environment }}
         steps:
-          - name: Checkout Repository
-            uses: actions/checkout@v4
-
-          - name: Install Railway CLI
-            run: npm install -g @railway/cli
-
-          - name: Deploy React App to Railway
+          - name: Trigger Railway Deployment via API
             run: |
-                export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-                railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-                railway service ${{ secrets.RAILWAY_REACT_SERVICE_ID }}
-                railway up --detach
+                RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+                  https://backboard.railway.app/graphql/v2 \
+                  -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+                  -H "Content-Type: application/json" \
+                  -d '{"query":"mutation serviceInstanceRedeploy($serviceId: String!) { serviceInstanceRedeploy(serviceId: $serviceId) }","variables":{"serviceId":"${{ secrets.RAILWAY_REACT_SERVICE_ID }}"}}')
+                
+                HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+                BODY=$(echo "$RESPONSE" | head -n-1)
+                
+                if [ "$HTTP_CODE" -eq 200 ]; then
+                    echo "✅ Railway deployment triggered successfully for React app"
+                    echo "Response: $BODY"
+                    echo "Check Railway dashboard for deployment progress"
+                else
+                    echo "❌ Failed to trigger deployment. HTTP Code: $HTTP_CODE"
+                    echo "Response: $BODY"
+                    exit 1
+                fi
 
-    
     deploy-dotnet-railway:
         needs: dotnet-ci
         runs-on: ubuntu-latest
@@ -135,34 +142,26 @@ jobs:
         environment:
             name: ${{ github.event.inputs.environment }}
         steps:
-          - name: Checkout Repository
-            uses: actions/checkout@v4
-
-          - name: Install Railway CLI
-            run: npm install -g @railway/cli
-
-          - name: Set Railway Variables and Deploy
+          - name: Trigger Railway Deployment via API
             run: |
-                export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
+                RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+                  https://backboard.railway.app/graphql/v2 \
+                  -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+                  -H "Content-Type: application/json" \
+                  -d '{"query":"mutation serviceInstanceRedeploy($serviceId: String!) { serviceInstanceRedeploy(serviceId: $serviceId) }","variables":{"serviceId":"${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}"}}')
                 
-                # Link to project and select service
-                railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-                railway service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}
+                HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+                BODY=$(echo "$RESPONSE" | head -n-1)
                 
-                # Build connection string
-                CONNECTION_STRING="Server=${{ vars.DB_HOST }};Port=${{ vars.DB_PORT }};Database=${{ vars.DB_NAME }};User=${{ vars.DB_USER }};Password=${{ secrets.MYSQL_ROOT_PASSWORD }};"
-                
-                # Set environment variables
-                railway variables set ASPNETCORE_ENVIRONMENT=${{ github.event.inputs.environment }}
-                railway variables set ConnectionStrings__Default="${CONNECTION_STRING}"
-                railway variables set DB_HOST="${{ vars.DB_HOST }}"
-                railway variables set DB_PORT="${{ vars.DB_PORT }}"
-                railway variables set DB_NAME="${{ vars.DB_NAME }}"
-                railway variables set DB_USER="${{ vars.DB_USER }}"
-                railway variables set DB_PASSWORD="${{ secrets.MYSQL_ROOT_PASSWORD }}"
-                
-                # Deploy
-                railway up --detach
+                if [ "$HTTP_CODE" -eq 200 ]; then
+                    echo "✅ Railway deployment triggered successfully for .NET backend"
+                    echo "Response: $BODY"
+                    echo "Check Railway dashboard for deployment progress"
+                else
+                    echo "❌ Failed to trigger deployment. HTTP Code: $HTTP_CODE"
+                    echo "Response: $BODY"
+                    exit 1
+                fi
 
 
     deploy-dev:
