@@ -76,6 +76,15 @@ jobs:
                 image-name: ${{ github.actor }}/react-frontend
                 tag: latest
 
+          - name: Build & Push React Docker Image to Docker Hub
+            uses: nadametwaly/centralized-automation-repo/.github/actions/react-docker-s2i@main
+            with:
+                registry: docker.io
+                username: ${{ secrets.DOCKER_USERNAME }}
+                password: ${{ secrets.DOCKER_PASSWORD }}
+                image-name: ${{ secrets.DOCKER_USERNAME }}/react-frontend
+                tag: latest
+
           - name: Run Trivy     #vulnerability scanner
             uses: aquasecurity/trivy-action@0.33.1
             with:
