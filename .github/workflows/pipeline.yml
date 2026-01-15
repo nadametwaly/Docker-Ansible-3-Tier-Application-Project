@@ -125,10 +125,7 @@ jobs:
             run: |
                 npm install -g @railway/cli
         
-          - name: Authenticate Railway CLI
-            run: |
-                echo "${{ secrets.RAILWAY_TOKEN }}" | railway login --token
-        
+          
           - name: Set Environment Variables
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -174,11 +171,6 @@ jobs:
           - name: Install Railway CLI
             run: |
                 npm install -g @railway/cli
-        
-          - name: Authenticate Railway CLI
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            run: railway whoami
         
           - name: Set Environment Variables
             env:
