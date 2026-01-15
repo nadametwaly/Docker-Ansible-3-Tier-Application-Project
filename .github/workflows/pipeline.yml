@@ -125,6 +125,12 @@ jobs:
             run: |
                 npm install -g @railway/cli
         
+          - name: Link Railway Project
+            env:
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            run: |
+                railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+        
           - name: Set Environment Variables
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -136,7 +142,7 @@ jobs:
                     DB_USER=${{ vars.DB_USER }} \
                     MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
                     --service ${{ secrets.RAILWAY_REACT_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }} \
+                    --environment ${{ github.event.inputs.environment }}ronment }} \
                     --project ${{ secrets.RAILWAY_PROJECT_ID }}
         
           - name: Deploy React Service to Railway
