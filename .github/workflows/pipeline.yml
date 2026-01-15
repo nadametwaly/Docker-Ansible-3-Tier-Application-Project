@@ -114,7 +114,6 @@ jobs:
             image: ghcr.io/railwayapp/cli:latest
         env:
             RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         steps:
           - name: Deploy React App to Railway
             run: |
@@ -130,7 +129,6 @@ jobs:
             image: ghcr.io/railwayapp/cli:latest
         env:
             RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         steps:
           - uses: actions/checkout@v4
 
