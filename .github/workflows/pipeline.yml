@@ -211,39 +211,17 @@ jobs:
 
 
     deploy-dev:
-        name: Deploy to Dev (Local with Ansible)
-        runs-on: [self-hosted, linux]
-        
-        # Dependencies - wait for CI jobs to complete
         needs: [dotnet-ci, react-ci]
-        
-        # Conditions - only run on develop branch for push events
-        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        
-        # Environment configuration
+        if: ${{ github.event.inputs.environment == 'dev' }}
+        runs-on: [self-hosted, linux]
         environment:
             name: dev
-            url: http://dev.yourdomain.com
-        
         steps:
         # Step 1: Checkout code
           - name: Checkout repository
             uses: actions/checkout@v4
         
-        # Step 2: Download artifacts from CI jobs
-          - name: Download dotnet artifacts
-            uses: actions/download-artifact@v4
-            with:
-                name: dotnet-build
-                path: ./DotNet-Backend/publish
-        
-          - name: Download react artifacts
-            uses: actions/download-artifact@v4
-            with:
-                name: react-build
-                path: ./React-Frontend/build
-        
-        # Step 3: Setup Python and Ansible
+        # Step 2: Setup Python and Ansible
           - name: Set up Python
             uses: actions/setup-python@v5
             with:
@@ -256,17 +234,22 @@ jobs:
                 ansible-galaxy collection install community.docker
                 ansible --version
         
-        # Step 4: Prepare Ansible variables
+        # Step 3: Verify Ansible playbook syntax
+          - name: Verify Ansible playbook syntax
+            run: |
+                ansible-playbook playbook.yml --syntax-check
+        
+        # Step 4: Create vars directory and files
           - name: Create Ansible vars files
             run: |
                 mkdir -p vars
             
-                # Create main.yml with non-sensitive vars
+                # Create main.yml with Docker username
                 cat > vars/main.yml << 'EOF'
-                DOCKER_USERNAME: "${{ secrets.DOCKER_USERNAME }}"
+                DOCKER_USERNAME: "nadametwaly24"
                 EOF
                 
-                # Create secrets.yml with sensitive vars
+                # Create secrets.yml with sensitive variables
                 cat > vars/secrets.yml << 'EOF'
                 DOCKER_PASSWORD: "${{ secrets.DOCKER_PASSWORD }}"
                 DB_PASSWORD: "${{ secrets.DB_PASSWORD }}"
@@ -275,73 +258,79 @@ jobs:
                 # Secure the secrets file
                 chmod 600 vars/secrets.yml
         
-        # Step 5: Run Ansible playbook
+        # Step 5: Run Ansible playbook for deployment
           - name: Run Ansible playbook
             env:
                 ANSIBLE_HOST_KEY_CHECKING: 'False'
                 ANSIBLE_FORCE_COLOR: 'True'
             run: |
                 ansible-playbook playbook.yml \
-                    -e "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" \
+                    -e "DOCKER_USERNAME=nadametwaly24" \
                     -e "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" \
                     -e "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
                     -v
-            
-        # Step 6: Wait for services
-          - name: Wait for services to be healthy
-            run: |
-                echo "Waiting for Docker Compose services to start..."
-                sleep 30
-                docker ps
-                echo "✅ Services started"
         
-        # Step 7: Health checks
-          - name: Health check
+      
+          - name: Display deployment status
+            if: always()
             run: |
-                # Backend health check
-                max_attempts=10
-                attempt=0
-                
-                while [ $attempt -lt $max_attempts ]; do
-                    if curl -f http://localhost:5000/health 2>/dev/null; then
-                        echo "✅ Backend API is healthy"
-                        break
-                    fi
-                    attempt=$((attempt + 1))
-                    echo "Waiting for backend... attempt $attempt/$max_attempts"
-                    sleep 5
-                done
-                
-                # Frontend health check
-                if curl -f http://localhost:3000 2>/dev/null || curl -f http://localhost:80 2>/dev/null; then
-                    echo "✅ Frontend is healthy"
-                fi
-            
-        # Step 8: Cleanup
+                echo "📊 Deployment Status Report"
+                echo "=============================="
+                echo ""
+                echo "🐳 Running Containers:"
+                docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+                echo ""
+                echo "📦 Docker Images:"
+                docker images | grep -E "nadametwaly24|REPOSITORY"
+                echo ""
+                echo "🔗 Docker Compose Services:"
+                docker-compose ps || echo "Unable to get compose status"
+        
+        # Step 9: Cleanup sensitive files
           - name: Cleanup sensitive files
             if: always()
             run: |
+                echo "🧹 Cleaning up sensitive files..."
                 rm -f vars/secrets.yml
                 rm -f db_password.txt
                 echo "✅ Cleanup completed"
         
-        # Step 9: Summary
+        # Step 10: Deployment summary
           - name: Deployment summary
             if: always()
             run: |
-                echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+                echo "## 🚀 Dev Environment Deployment Summary" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
                 echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
                 echo "| Environment | \`dev\` |" >> $GITHUB_STEP_SUMMARY
-                echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+                echo "| Runner | Self-hosted Linux |" >> $GITHUB_STEP_SUMMARY
+                echo "| Status | **${{ job.status }}** |" >> $GITHUB_STEP_SUMMARY
                 echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
                 echo "| Author | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
-                echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+                echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+                echo "| Workflow | ${{ github.workflow }} |" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
                 
                 if [ "${{ job.status }}" == "success" ]; then
                     echo "### ✅ Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Deployed Services:**" >> $GITHUB_STEP_SUMMARY
+                    echo "- 🔙 Backend API (DotNet)" >> $GITHUB_STEP_SUMMARY
+                    echo "- 🎨 Frontend (React)" >> $GITHUB_STEP_SUMMARY
+                    echo "- 🗄️  Database (PostgreSQL)" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Docker Images:**" >> $GITHUB_STEP_SUMMARY
+                    echo "- \`nadametwaly24/backend-dotnet-api:latest\`" >> $GITHUB_STEP_SUMMARY
+                    echo "- \`nadametwaly24/frontend-react:latest\`" >> $GITHUB_STEP_SUMMARY
                 else
                     echo "### ❌ Deployment Failed!" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "Please check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
                 fi
+            
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "---" >> $GITHUB_STEP_SUMMARY
+                echo "📝 **Note:** This is a local deployment using Ansible and Docker Compose" >> $GITHUB_STEP_SUMMARY
+            
+    
