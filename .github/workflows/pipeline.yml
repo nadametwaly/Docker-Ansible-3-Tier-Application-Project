@@ -136,7 +136,8 @@ jobs:
                     DB_USER=${{ vars.DB_USER }} \
                     MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
                     --service ${{ secrets.RAILWAY_REACT_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }}
+                    --environment ${{ github.event.inputs.environment }} \
+                    --project ${{ secrets.RAILWAY_PROJECT_ID }}
         
           - name: Deploy React Service to Railway
             env:
