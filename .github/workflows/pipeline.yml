@@ -125,24 +125,13 @@ jobs:
             run: |
                 npm install -g @railway/cli
         
-          - name: Set Environment Variables
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            run: |
-                railway variables set \
-                    DB_HOST=${{ vars.DB_HOST }} \
-                    DB_PORT=${{ vars.DB_PORT }} \
-                    DB_NAME=${{ vars.DB_NAME }} \
-                    DB_USER=${{ vars.DB_USER }} \
-                    MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
-                    --service ${{ secrets.RAILWAY_REACT_SERVICE_ID }}
-        
           - name: Deploy React Service to Railway
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+                RAILWAY_SERVICE: ${{ secrets.RAILWAY_REACT_SERVICE_ID }}
             run: |
-                railway up --service ${{ secrets.RAILWAY_REACT_SERVICE_ID }} --detach
-        
+                railway up --detach
+                
           - name: Deployment Summary
             run: |
                 echo "## 🚀 React Deployment Complete" >> $GITHUB_STEP_SUMMARY
