@@ -113,8 +113,8 @@ jobs:
         container:
             image: ghcr.io/railwayapp/cli:latest
         env:
-            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}           # Fixed: was API_TOKEN
-            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }} # Added: Required!
+            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         steps:
           - name: Deploy React App to Railway
             run: |
@@ -129,18 +129,26 @@ jobs:
         container:
             image: ghcr.io/railwayapp/cli:latest
         env:
-            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}           # Fixed: was API_TOKEN
-            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }} # Added: Required!
+            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         steps:
           - uses: actions/checkout@v4
 
           - name: Set Railway Variables
             env:
-                DB_CONN: ${{ secrets.DB_CONNECTION_STRING }}  # Fixed: proper escaping
+                DB_HOST: ${{ vars.DB_HOST }}
+                DB_PORT: ${{ vars.DB_PORT }}
+                DB_NAME: ${{ vars.DB_NAME }}
+                DB_USER: ${{ vars.DB_USER }}
+                DB_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
             run: |
+                # Build connection string from components
+                CONNECTION_STRING="Server=${DB_HOST};Port=${DB_PORT};Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};"
+                
+                # Set Railway environment variables
                 railway variables set \
-                ASPNETCORE_ENVIRONMENT=${{ github.event.inputs.environment }} \
-                ConnectionStrings__Default="$DB_CONN"
+                  ASPNETCORE_ENVIRONMENT=${{ github.event.inputs.environment }} \
+                  ConnectionStrings__Default="${CONNECTION_STRING}"
 
           - name: Deploy .NET Backend
             run: |
@@ -156,6 +164,13 @@ jobs:
           - uses: actions/checkout@v4
 
           - name: Deploy full stack with Ansible
+            env:
+                DB_HOST: ${{ vars.DB_HOST }}
+                DB_PORT: ${{ vars.DB_PORT }}
+                DB_NAME: ${{ vars.DB_NAME }}
+                DB_USER: ${{ vars.DB_USER }}
+                DB_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+                API_URL: ${{ vars.API_URL }}
             run: |
                 ansible-playbook deploy.yml \
                 -e "environment=dev" \
@@ -163,4 +178,9 @@ jobs:
                 -e "github_token=${{ secrets.GITHUB_TOKEN }}" \
                 -e "docker_username=${{ secrets.DOCKER_USERNAME }}" \
                 -e "docker_password=${{ secrets.DOCKER_PASSWORD }}" \
-                -e "db_password=${{ secrets.DB_PASSWORD }}"
+                -e "db_host=${DB_HOST}" \
+                -e "db_port=${DB_PORT}" \
+                -e "db_name=${DB_NAME}" \
+                -e "db_user=${DB_USER}" \
+                -e "db_password=${DB_PASSWORD}" \
+                -e "api_url=${API_URL}"
