@@ -123,8 +123,7 @@ jobs:
         
           - name: Install Railway CLI
             run: |
-                curl -fsSL https://railway.app/install.sh | sh
-                echo "$HOME/.railway/bin" >> $GITHUB_PATH
+                npm install -g @railway/cli
         
           - name: Authenticate Railway CLI
             env:
@@ -175,8 +174,7 @@ jobs:
         
           - name: Install Railway CLI
             run: |
-                curl -fsSL https://railway.app/install.sh | sh
-                echo "$HOME/.railway/bin" >> $GITHUB_PATH
+                npm install -g @railway/cli
         
           - name: Authenticate Railway CLI
             env:
