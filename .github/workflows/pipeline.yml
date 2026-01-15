@@ -211,32 +211,137 @@ jobs:
 
 
     deploy-dev:
-        needs: [dotnet-ci, react-ci]
-        if: ${{ github.event.inputs.environment == 'dev' }}
+        name: Deploy to Dev (Local with Ansible)
         runs-on: [self-hosted, linux]
+        
+        # Dependencies - wait for CI jobs to complete
+        needs: [dotnet-ci, react-ci]
+        
+        # Conditions - only run on develop branch for push events
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+        
+        # Environment configuration
         environment:
             name: dev
+            url: http://dev.yourdomain.com
+        
         steps:
-          - uses: actions/checkout@v4
-
-          - name: Deploy full stack with Ansible
-            env:
-                DB_HOST: ${{ vars.DB_HOST }}
-                DB_PORT: ${{ vars.DB_PORT }}
-                DB_NAME: ${{ vars.DB_NAME }}
-                DB_USER: ${{ vars.DB_USER }}
-                DB_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-                API_URL: ${{ vars.API_URL }}
+        # Step 1: Checkout code
+          - name: Checkout repository
+            uses: actions/checkout@v4
+        
+        # Step 2: Download artifacts from CI jobs
+          - name: Download dotnet artifacts
+            uses: actions/download-artifact@v4
+            with:
+                name: dotnet-build
+                path: ./DotNet-Backend/publish
+        
+          - name: Download react artifacts
+            uses: actions/download-artifact@v4
+            with:
+                name: react-build
+                path: ./React-Frontend/build
+        
+        # Step 3: Setup Python and Ansible
+          - name: Set up Python
+            uses: actions/setup-python@v5
+            with:
+                python-version: '3.11'
+        
+          - name: Install Ansible and Docker collection
             run: |
-                ansible-playbook deploy.yml \
-                -e "environment=dev" \
-                -e "github_actor=${{ github.actor }}" \
-                -e "github_token=${{ secrets.GITHUB_TOKEN }}" \
-                -e "docker_username=${{ secrets.DOCKER_USERNAME }}" \
-                -e "docker_password=${{ secrets.DOCKER_PASSWORD }}" \
-                -e "db_host=${DB_HOST}" \
-                -e "db_port=${DB_PORT}" \
-                -e "db_name=${DB_NAME}" \
-                -e "db_user=${DB_USER}" \
-                -e "db_password=${DB_PASSWORD}" \
-                -e "api_url=${API_URL}"
+                python -m pip install --upgrade pip
+                pip install ansible
+                ansible-galaxy collection install community.docker
+                ansible --version
+        
+        # Step 4: Prepare Ansible variables
+          - name: Create Ansible vars files
+            run: |
+                mkdir -p vars
+            
+                # Create main.yml with non-sensitive vars
+                cat > vars/main.yml << 'EOF'
+                DOCKER_USERNAME: "${{ secrets.DOCKER_USERNAME }}"
+                EOF
+                
+                # Create secrets.yml with sensitive vars
+                cat > vars/secrets.yml << 'EOF'
+                DOCKER_PASSWORD: "${{ secrets.DOCKER_PASSWORD }}"
+                DB_PASSWORD: "${{ secrets.DB_PASSWORD }}"
+                EOF
+                
+                # Secure the secrets file
+                chmod 600 vars/secrets.yml
+        
+        # Step 5: Run Ansible playbook
+          - name: Run Ansible playbook
+            env:
+                ANSIBLE_HOST_KEY_CHECKING: 'False'
+                ANSIBLE_FORCE_COLOR: 'True'
+            run: |
+                ansible-playbook playbook.yml \
+                    -e "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" \
+                    -e "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" \
+                    -e "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+                    -v
+            
+        # Step 6: Wait for services
+          - name: Wait for services to be healthy
+            run: |
+                echo "Waiting for Docker Compose services to start..."
+                sleep 30
+                docker ps
+                echo "✅ Services started"
+        
+        # Step 7: Health checks
+          - name: Health check
+            run: |
+                # Backend health check
+                max_attempts=10
+                attempt=0
+                
+                while [ $attempt -lt $max_attempts ]; do
+                    if curl -f http://localhost:5000/health 2>/dev/null; then
+                        echo "✅ Backend API is healthy"
+                        break
+                    fi
+                    attempt=$((attempt + 1))
+                    echo "Waiting for backend... attempt $attempt/$max_attempts"
+                    sleep 5
+                done
+                
+                # Frontend health check
+                if curl -f http://localhost:3000 2>/dev/null || curl -f http://localhost:80 2>/dev/null; then
+                    echo "✅ Frontend is healthy"
+                fi
+            
+        # Step 8: Cleanup
+          - name: Cleanup sensitive files
+            if: always()
+            run: |
+                rm -f vars/secrets.yml
+                rm -f db_password.txt
+                echo "✅ Cleanup completed"
+        
+        # Step 9: Summary
+          - name: Deployment summary
+            if: always()
+            run: |
+                echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+                echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+                echo "| Environment | \`dev\` |" >> $GITHUB_STEP_SUMMARY
+                echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+                echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+                echo "| Author | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+                echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                
+                if [ "${{ job.status }}" == "success" ]; then
+                    echo "### ✅ Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+                else
+                    echo "### ❌ Deployment Failed!" >> $GITHUB_STEP_SUMMARY
+                fi
