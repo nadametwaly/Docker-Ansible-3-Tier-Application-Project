@@ -217,118 +217,19 @@ jobs:
         environment:
             name: dev
         steps:
-        # Step 1: Checkout code
           - name: Checkout repository
             uses: actions/checkout@v4
-        
-        
-          - name: Install Ansible and Docker collection
+
+          - name: Install Ansible & Docker collections
             run: |
-                python -m pip install --upgrade pip
-                pip install ansible
+                sudo dnf install -y ansible
                 ansible-galaxy collection install community.docker
-                ansible --version
-        
-        # Step 3: Verify Ansible playbook syntax
-          - name: Verify Ansible playbook syntax
-            run: |
-                ansible-playbook playbook.yml --syntax-check
-        
-        # Step 4: Create vars directory and files
-          - name: Create Ansible vars files
-            run: |
-                mkdir -p vars
-            
-                # Create main.yml with Docker username
-                cat > vars/main.yml << 'EOF'
-                DOCKER_USERNAME: "nadametwaly24"
-                EOF
-                
-                # Create secrets.yml with sensitive variables
-                cat > vars/secrets.yml << 'EOF'
-                DOCKER_PASSWORD: "${{ secrets.DOCKER_PASSWORD }}"
-                DB_PASSWORD: "${{ secrets.DB_PASSWORD }}"
-                EOF
-                
-                # Secure the secrets file
-                chmod 600 vars/secrets.yml
-        
-        # Step 5: Run Ansible playbook for deployment
-          - name: Run Ansible playbook
-            env:
-                ANSIBLE_HOST_KEY_CHECKING: 'False'
-                ANSIBLE_FORCE_COLOR: 'True'
-                ANSIBLE_BECOME_METHOD: 'sudo'
+
+          - name: Run Ansible Playbook (Local Deployment)
             run: |
                 ansible-playbook playbook.yml \
-                    -e "DOCKER_USERNAME=nadametwaly24" \
-                    -e "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" \
-                    -e "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-                    --become \
-                    --connection=local \
-                    -v
-        
-      
-          - name: Display deployment status
-            if: always()
-            run: |
-                echo "📊 Deployment Status Report"
-                echo "=============================="
-                echo ""
-                echo "🐳 Running Containers:"
-                docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-                echo ""
-                echo "📦 Docker Images:"
-                docker images | grep -E "nadametwaly24|REPOSITORY"
-                echo ""
-                echo "🔗 Docker Compose Services:"
-                docker-compose ps || echo "Unable to get compose status"
-        
-        # Step 9: Cleanup sensitive files
-          - name: Cleanup sensitive files
-            if: always()
-            run: |
-                echo "🧹 Cleaning up sensitive files..."
-                rm -f vars/secrets.yml
-                rm -f db_password.txt
-                echo "✅ Cleanup completed"
-        
-        # Step 10: Deployment summary
-          - name: Deployment summary
-            if: always()
-            run: |
-                echo "## 🚀 Dev Environment Deployment Summary" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-                echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-                echo "| Environment | \`dev\` |" >> $GITHUB_STEP_SUMMARY
-                echo "| Runner | Self-hosted Linux |" >> $GITHUB_STEP_SUMMARY
-                echo "| Status | **${{ job.status }}** |" >> $GITHUB_STEP_SUMMARY
-                echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-                echo "| Author | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
-                echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-                echo "| Workflow | ${{ github.workflow }} |" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                
-                if [ "${{ job.status }}" == "success" ]; then
-                    echo "### ✅ Deployment Successful!" >> $GITHUB_STEP_SUMMARY
-                    echo "" >> $GITHUB_STEP_SUMMARY
-                    echo "**Deployed Services:**" >> $GITHUB_STEP_SUMMARY
-                    echo "- 🔙 Backend API (DotNet)" >> $GITHUB_STEP_SUMMARY
-                    echo "- 🎨 Frontend (React)" >> $GITHUB_STEP_SUMMARY
-                    echo "- 🗄️  Database (PostgreSQL)" >> $GITHUB_STEP_SUMMARY
-                    echo "" >> $GITHUB_STEP_SUMMARY
-                    echo "**Docker Images:**" >> $GITHUB_STEP_SUMMARY
-                    echo "- \`nadametwaly24/backend-dotnet-api:latest\`" >> $GITHUB_STEP_SUMMARY
-                    echo "- \`nadametwaly24/frontend-react:latest\`" >> $GITHUB_STEP_SUMMARY
-                else
-                    echo "### ❌ Deployment Failed!" >> $GITHUB_STEP_SUMMARY
-                    echo "" >> $GITHUB_STEP_SUMMARY
-                    echo "Please check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
-                fi
-            
-                echo "" >> $GITHUB_STEP_SUMMARY
-                echo "---" >> $GITHUB_STEP_SUMMARY
-                echo "📝 **Note:** This is a local deployment using Ansible and Docker Compose" >> $GITHUB_STEP_SUMMARY
-            
-    
+                -i localhost, \
+                --connection=local \
+                -e "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" \
+                -e "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" \
+                -e "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
