@@ -222,7 +222,19 @@ jobs:
 
           - name: Install Ansible & Docker collections
             run: |
-                sudo dnf install -y ansible
+                # Install Python3 and pip if missing
+                sudo dnf install -y python3 python3-pip
+
+                # Install latest Ansible via pip
+                pip3 install --user --upgrade ansible
+
+                # Add local pip bin to PATH so ansible command works
+                echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+                # Verify Ansible version
+                ansible --version
+
+                # Install Docker collection
                 ansible-galaxy collection install community.docker
 
           - name: Run Ansible Playbook (Local Deployment)
