@@ -111,21 +111,22 @@ jobs:
 
     
     deploy-react-railway:
-      runs-on: ubuntu-latest
-      needs: react-ci
-      container:
-         image: ghcr.io/railwayapp/cli:latest
-         env: 
-            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            SVC_NAME: react-app
+        runs-on: ubuntu-latest
+        needs: react-ci
+        if: github.event.inputs.environment != 'dev'
+        environment: ${{ github.event.inputs.environment }}
+        container:
+            image: ghcr.io/railwayapp/cli:latest
+            env: 
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+                SVC_NAME: react-frontend-staging
          
-      steps:
-      - name: Deploy Docker Image to Railway 
-        run: |
-          railway redeploy --service=$SVC_NAME -y
-    # ========================================
-    # 🔵 Deploy .NET to Railway (Staging & Production)
-    # ========================================
+        steps:
+          - name: Deploy Docker Image to Railway 
+            run: |
+                railway redeploy --service=$SVC_NAME -y
+
+
     deploy-dotnet-railway:
         name: Deploy .NET to Railway
         runs-on: ubuntu-latest
