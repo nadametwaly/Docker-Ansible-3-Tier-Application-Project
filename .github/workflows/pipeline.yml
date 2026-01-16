@@ -136,7 +136,7 @@ jobs:
                     --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
                     --environment ${{ github.event.inputs.environment }}
             
-          - name: Deploy .react Service to Railway
+          - name: Deploy react Service to Railway
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
@@ -208,7 +208,7 @@ jobs:
     deploy-dev:
         runs-on: [self-hosted, linux]
         needs: [dotnet-ci, react-ci]
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENVIRONMENT == 'dev'
+        if: ${{ github.event.inputs.environment == 'dev' }}
         environment: dev
         permissions:
             contents: read
