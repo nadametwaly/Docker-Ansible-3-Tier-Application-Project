@@ -1,54 +1,66 @@
+version: '3.8'
 
 services:
   frontend:
-    build: ./React-Frontend
+    image: nadametwaly24/frontend-react:latest
+    container_name: frontend
     ports:
-      - "8080:80"
-    networks:
-      - app-network
+      - "3000:80"
     depends_on:
       - backend
-    environment:
-      APP_URL: ${APP_URL} 
-  
-  backend:
-    build: ./DotNet-Backend
-
-    ports:
-      - "5000:8080" 
-    depends_on:
-      - db
     networks:
       - app-network
-    secrets:
-      - db_password
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD_FILE: ${MYSQL_ROOT_PASSWORD}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+    restart: unless-stopped
+
+  backend:
+    image: nadametwaly24/backend-dotnet-api:latest
+    container_name: backend
+    ports:
+      - "5000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=Server=${DB_HOST:-db};Port=${DB_PORT:-3306};Database=${DB_NAME:-myappdb};User=${DB_USER:-root};Password=${MYSQL_ROOT_PASSWORD};
+    restart: unless-stopped
 
   db:
     image: mysql:8.0
+    container_name: mysql-db
     ports:
       - "3306:3306"
     volumes:
-      - db-data:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
     networks:
       - app-network
     secrets:
       - db_password
     environment:
-      MYSQL_ROOT_PASSWORD_FILE: ${MYSQL_ROOT_PASSWORD}   #/run/secrets/db_password
-      MYSQL_DATABASE: ${DB_NAME}      #appdb
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_DATABASE: ${DB_NAME:-myappdb}
+      MYSQL_USER: ${DB_USER:-appuser}
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$(cat /run/secrets/db_password)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
 networks:
   app-network:
     driver: bridge
 
 volumes:
-  db-data:
+  mysql-data:
+    driver: local
 
 secrets:
   db_password:
