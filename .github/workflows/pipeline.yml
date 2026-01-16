@@ -134,46 +134,16 @@ jobs:
         if: github.event.inputs.environment != 'dev'
         environment: ${{ github.event.inputs.environment }}
         
+        container:
+            image: ghcr.io/railwayapp/cli:latest
+            env: 
+                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+                SVC_NAME: dotnet-app-staging
+         
         steps:
-          - name: Checkout Repository
-            uses: actions/checkout@v4
-        
-          - name: Install Railway CLI
+          - name: Deploy Docker Image to Railway 
             run: |
-                npm install -g @railway/cli
-        
-          - name: Set Environment Variables
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            run: |
-                railway variables set \
-                    DB_HOST=${{ vars.DB_HOST }} \
-                    DB_PORT=${{ vars.DB_PORT }} \
-                    DB_NAME=${{ vars.DB_NAME }} \
-                    DB_USER=${{ vars.DB_USER }} \
-                    MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
-                    --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }}
-            
-          - name: Deploy .NET Service to Railway
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            run: |
-                railway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }} \
-                    --detach
-        
-          - name: Deployment Summary
-            run: |
-                echo "## 🚀 .NET Deployment Complete" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-                echo "**Service URL:** ${{ vars.RAILWAY_DOTNET_URL }}" >> $GITHUB_STEP_SUMMARY
-                echo "**Service ID:** ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                echo "✅ .NET backend deployed successfully!" >> $GITHUB_STEP_SUMMARY
-
-
+                railway redeploy --service=$SVC_NAME -y
 
     deploy-dev:
         runs-on: [self-hosted, linux]
