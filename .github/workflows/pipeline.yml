@@ -205,24 +205,16 @@ jobs:
                 ansible --version
                 ansible-galaxy collection list
         
-          - name: Create Ansible vars directory
-            run: mkdir -p vars
-        
-          - name: Create Ansible variables file
+          - name: Run Ansible Playbook
             run: |
-                cat > vars/main.yml << EOF
-                DOCKER_USERNAME: "${{ secrets.DOCKER_USERNAME }}"
-                DOCKER_PASSWORD: "${{ secrets.DOCKER_PASSWORD }}"
-                DB_PASSWORD: "${{ secrets.MYSQL_ROOT_PASSWORD }}"
-                EOF
-        
-          - name: Run Ansible playbook
-            run: |
-                ansible-playbook playbook.yml -v
-            env:
-                DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-                DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-                DB_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+              ansible-playbook playbook.yml \
+                -e github_actor=${{ github.actor }} \
+                -e github_token=${{ secrets.GITHUB_TOKEN }} \
+                -e mysql_root_password=${{ secrets.MYSQL_ROOT_PASSWORD }} \
+                -e db_name=${{ vars.DB_NAME }} \
+                -e db_user=${{ vars.DB_USER }} \
+                -e db_port=${{ vars.DB_PORT }} \
+                -e db_host=${{ vars.DB_HOST }}
         
           - name: Clean up sensitive files
             if: always()
