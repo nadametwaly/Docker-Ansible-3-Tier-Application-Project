@@ -132,14 +132,9 @@ jobs:
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
-                railway variables set \
-                    DB_HOST=${{ vars.DB_HOST }} \
-                    DB_PORT=${{ vars.DB_PORT }} \
-                    DB_NAME=${{ vars.DB_NAME }} \
-                    DB_USER=${{ vars.DB_USER }} \
-                    MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
-                    --service ${{ secrets.RAILWAY_REACT_SERVICE_ID }} \           
-                    --environment ${{ github.event.inputs.environment }}
+                railway variables --service  React-Frontend \
+                    --set NODE_ENV=production \
+                    --set VITE_API_BASE_URL=https://${{ vars.RAILWAY_DOTNET_URL }}/api
             
           - name: Deploy react Service to Railway
             env:
