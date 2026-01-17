@@ -137,8 +137,6 @@ jobs:
                     --set VITE_API_BASE_URL=https://${{ vars.RAILWAY_DOTNET_URL }}/api
             
           - name: Deploy react Service to Railway
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: railway up --service React-Frontend
         
           - name: Deployment Summary
