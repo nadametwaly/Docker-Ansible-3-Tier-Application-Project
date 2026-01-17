@@ -17,7 +17,6 @@ permissions:
 jobs:
     dotnet-ci:
         permissions:
-            packages: write
             contents: read
             actions: read
             security-events: write
@@ -50,8 +49,6 @@ jobs:
           - name: Build React Application
             run: npm run build
             working-directory: React-Frontend
-            env:
-                VITE_API_BASE_URL: http://localhost:8080/api
 
           - name: CodeQL Analysis
             uses: github/codeql-action/init@v3
@@ -118,8 +115,6 @@ jobs:
         needs: react-ci
         if: github.event.inputs.environment != 'dev'
         environment: ${{ github.event.inputs.environment }}
-        env:
-            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         steps:
           - name: Checkout Repository
             uses: actions/checkout@v4
@@ -132,34 +127,32 @@ jobs:
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
             run: |
-                railway variables set NODE_ENV=production \
-                    --service React-Frontend \
-                    --environment ${{ github.event.inputs.environment }}
-                railway variables set VITE_API_BASE_URL=https://${{ vars.RAILWAY_DOTNET_URL }}/api \
-                    --service React-Frontend \
+                railway variables set \
+                    DB_HOST=${{ vars.DB_HOST }} \
+                    DB_PORT=${{ vars.DB_PORT }} \
+                    DB_NAME=${{ vars.DB_NAME }} \
+                    DB_USER=${{ vars.DB_USER }} \
+                    MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
+                    --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
                     --environment ${{ github.event.inputs.environment }}
             
-          - name: Deploy React Service to Railway
+          - name: Deploy react Service to Railway
             env:
                 RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            working-directory: React-Frontend
             run: |
-                railway up --service React-Frontend \
+                railway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
                     --environment ${{ github.event.inputs.environment }} \
                     --detach
         
           - name: Deployment Summary
             run: |
-                echo "## 🚀 React Deployment Complete" >> $GITHUB_STEP_SUMMARY
+                echo "## 🚀 react Deployment Complete" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-                echo "**Service URL:** ${{ vars.RAILWAY_REACT_URL }}" >> $GITHUB_STEP_SUMMARY
+                echo "**Service URL:** ${{ vars.RAILWAY_DOTNET_URL }}" >> $GITHUB_STEP_SUMMARY
+                echo "**Service ID:** ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
-                echo "✅ React frontend deployed successfully!" >> $GITHUB_STEP_SUMMARY
-
-
-
-
+                echo "✅ react frontend deployed successfully!" >> $GITHUB_STEP_SUMMARY
     deploy-dotnet-railway:
         name: Deploy .NET to Railway
         runs-on: ubuntu-latest
@@ -205,9 +198,6 @@ jobs:
                 echo "**Service ID:** ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }}" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "✅ .NET backend deployed successfully!" >> $GITHUB_STEP_SUMMARY
-
-
-
     deploy-dev:
         runs-on: [self-hosted, linux]
         needs: [dotnet-ci, react-ci]
