@@ -123,27 +123,15 @@ jobs:
             run: |
                 npm install -g @railway/cli
         
-          - name: Set Environment Variables
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          - name: Set React environment variables
             run: |
-                railway variables set \
-                    DB_HOST=${{ vars.DB_HOST }} \
-                    DB_PORT=${{ vars.DB_PORT }} \
-                    DB_NAME=${{ vars.DB_NAME }} \
-                    DB_USER=${{ vars.DB_USER }} \
-                    MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
-                    --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }}
+                railway variables --service React-Frontend \
+                    --set NODE_ENV=production \
+                    --set VITE_API_BASE_URL=https://${{ vars.RAILWAY_DOTNET_URL }}/api
+
+          - name: Deploy React Service
+            run: railway up --service React-Frontend
             
-          - name: Deploy react Service to Railway
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            run: |
-                railway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }} \
-                    --detach
-        
           - name: Deployment Summary
             run: |
                 echo "## 🚀 react Deployment Complete" >> $GITHUB_STEP_SUMMARY
@@ -168,27 +156,19 @@ jobs:
             run: |
                 npm install -g @railway/cli
         
-          - name: Set Environment Variables
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          - name: Set Backend environment variables
             run: |
-                railway variables set \
-                    DB_HOST=${{ vars.DB_HOST }} \
-                    DB_PORT=${{ vars.DB_PORT }} \
-                    DB_NAME=${{ vars.DB_NAME }} \
-                    DB_USER=${{ vars.DB_USER }} \
-                    MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
-                    --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }}
+                railway variables --service DotNet-Backend \
+                    --set ASPNETCORE_ENVIRONMENT=Production \
+                    --set DB_HOST=${{ vars.DB_HOST }} \
+                    --set DB_PORT=${{ vars.DB_PORT }} \
+                    --set DB_NAME=${{ vars.DB_NAME }} \
+                    --set DB_USER=${{ vars.DB_USER }} \
+                    --set DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+
+          - name: Deploy Backend Service
+            run: railway up --service DotNet-Backend
             
-          - name: Deploy .NET Service to Railway
-            env:
-                RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-            run: |
-                railway up --service ${{ secrets.RAILWAY_DOTNET_SERVICE_ID }} \
-                    --environment ${{ github.event.inputs.environment }} \
-                    --detach
-        
           - name: Deployment Summary
             run: |
                 echo "## 🚀 .NET Deployment Complete" >> $GITHUB_STEP_SUMMARY
