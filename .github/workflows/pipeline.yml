@@ -132,7 +132,7 @@ jobs:
                     --set VITE_API_BASE_URL=https://${{ vars.RAILWAY_DOTNET_URL }}/api
 
           - name: Deploy React Service
-            run: railway redeploy --service React-Frontend
+            run: railway redeploy --service React-Frontend -y
             
           - name: Deployment Summary
             run: |
@@ -171,7 +171,7 @@ jobs:
                     --set DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
 
           - name: Deploy Backend Service
-            run: railway redeploy --service=DotNet-Backend
+            run: railway redeploy --service=DotNet-Backend -y
             
           - name: Deployment Summary
             run: |
